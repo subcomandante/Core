@@ -53,8 +53,8 @@
 //# define M_SQRT2	1.41421356237309504880	/* sqrt(2) */
 //# define M_SQRT1_2	0.70710678118654752440	/* 1/sqrt(2) */
 
-#define FAST_MATH
-#define FAST_TRIG
+//#define FAST_MATH
+//#define FAST_TRIG
 
 __BEGIN_YAFRAY
 
