@@ -410,7 +410,7 @@ float coatedGlossyMat_t::pdf(const renderState_t &state, const surfacePoint_t &s
 			else if(i == C_DIFFUSE)
 			{
 				#ifdef Y_CHECK_DOMAIN
-					pdf += std::fabs(std::max(-1.f,std::min(1.f,wi*N)) * width;
+					pdf += std::fabs(std::max(-1.f,std::min(1.f,wi*N))) * width;
 				#else
 					pdf += std::fabs(wi*N) * width;
 				#endif
@@ -428,7 +428,7 @@ void coatedGlossyMat_t::getSpecular(const renderState_t &state, const surfacePoi
 	bool outside = sp.Ng*wo >= 0.f;
 	vector3d_t N, Ng;
 	#ifdef Y_CHECK_DOMAIN
-		float cos_wo_N = std::max(-1.f,std::min(1.f,sp.N*wo);
+		float cos_wo_N = std::max(-1.f,std::min(1.f,sp.N*wo));
 	#else
 		float cos_wo_N = sp.N*wo;
 	#endif
@@ -455,7 +455,7 @@ void coatedGlossyMat_t::getSpecular(const renderState_t &state, const surfacePoi
 	dir[0].normalize();
 	col[0] = Kr * mirror_color;
 	#ifdef Y_CHECK_DOMAIN
-		float cos_wi_Ng = std::max(-1.f,std::min(1.f,dir[0]*Ng);
+		float cos_wi_Ng = std::max(-1.f,std::min(1.f,dir[0]*Ng));
 	#else
 		float cos_wi_Ng = dir[0]*Ng;
 	#endif
