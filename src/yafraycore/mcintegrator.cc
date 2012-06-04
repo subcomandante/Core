@@ -534,7 +534,7 @@ inline void mcIntegrator_t::recursiveRaytrace(renderState_t &state, diffRay_t &r
 		}
 
 		//...perfect specular reflection/refraction with recursive raytracing...
-		if(bsdfs & (BSDF_SPECULAR | BSDF_FILTER) && state.raylevel < 20)
+		if(bsdfs & (BSDF_SPECULAR | BSDF_FILTER))
 		{
 			state.includeLights = true;
 			bool reflect=false, refract=false;
@@ -547,13 +547,14 @@ inline void mcIntegrator_t::recursiveRaytrace(renderState_t &state, diffRay_t &r
 				diffRay_t refRay(sp.P, dir[0], MIN_RAYDIST);
 				spDiff.reflectedRay(ray, refRay);
 				color_t integ = integrate(state, refRay);
+				//color_t integ(1.0);
 				
 				if((bsdfs&BSDF_VOLUMETRIC) && (vol=material->getVolumeHandler(sp.Ng * refRay.dir < 0)))
 				{
 					if(vol->transmittance(state, refRay, vcol)) integ *= vcol;
 				}
 				
-				col += integ * rcol[0];
+				col += integ * rcol[0];  //BD come from integ
 			}
 			if(refract)
 			{

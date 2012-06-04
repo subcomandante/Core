@@ -16,6 +16,11 @@
 
 #cmakedefine HAVE_UNISTD_H 1
 
+#define Y_CHECK_DOMAIN
+#define Y_CHECK_NORMALIZATION
+
+#define YAF_MIN_FLOAT 1e-6f
+
 __BEGIN_YAFRAY
 typedef float CFLOAT;
 typedef float GFLOAT;

@@ -40,17 +40,17 @@ class YAFRAYPLUGIN_EXPORT directLighting_t: public mcIntegrator_t
 
 directLighting_t::directLighting_t(bool transpShad, int shadowDepth, int rayDepth)
 {
-	type = SURFACE;
-	causRadius = 0.25;
-	causDepth = 10;
-	nCausPhotons = 100000;
-	nCausSearch = 100;
-	trShad = transpShad;
-	usePhotonCaustics = false;
-	sDepth = shadowDepth;
-	rDepth = rayDepth;
-	integratorName = "DirectLight";
-	integratorShortName = "DL";
+	type			= SURFACE;
+	causRadius		= 0.25;
+	causDepth		= 10;
+	nCausPhotons		= 100000;
+	nCausSearch		= 100;
+	trShad			= transpShad;
+	usePhotonCaustics	= false;
+	sDepth			= shadowDepth;
+	rDepth			= rayDepth;
+	integratorName		= "DirectLight";
+	integratorShortName	= "DL";
 }
 
 bool directLighting_t::preprocess()
@@ -146,31 +146,31 @@ integrator_t* directLighting_t::factory(paraMap_t &params, renderEnvironment_t &
 	double AO_dist = 1.0;
 	color_t AO_col(1.f);
 	
-	params.getParam("raydepth", raydepth);
-	params.getParam("transpShad", transpShad);
-	params.getParam("shadowDepth", shadowDepth);
-	params.getParam("caustics", caustics);
-	params.getParam("photons", photons);
-	params.getParam("caustic_mix", search);
-	params.getParam("caustic_depth", cDepth);
-	params.getParam("caustic_radius", cRad);
-	params.getParam("do_AO", do_AO);
-	params.getParam("AO_samples", AO_samples);
-	params.getParam("AO_distance", AO_dist);
-	params.getParam("AO_color", AO_col);
+	params.getParam("raydepth",		raydepth);
+	params.getParam("transpShad",		transpShad);
+	params.getParam("shadowDepth",		shadowDepth);
+	params.getParam("caustics",		caustics);
+	params.getParam("photons",		photons);
+	params.getParam("caustic_mix",		search);
+	params.getParam("caustic_depth",	cDepth);
+	params.getParam("caustic_radius",	cRad);
+	params.getParam("do_AO",		do_AO);
+	params.getParam("AO_samples",		AO_samples);
+	params.getParam("AO_distance",		AO_dist);
+	params.getParam("AO_color",		AO_col);
 	
 	directLighting_t *inte = new directLighting_t(transpShad, shadowDepth, raydepth);
 	// caustic settings
-	inte->usePhotonCaustics = caustics;
-	inte->nCausPhotons = photons;
-	inte->nCausSearch = search;
-	inte->causDepth = cDepth;
-	inte->causRadius = cRad;
+	inte->usePhotonCaustics	= caustics;
+	inte->nCausPhotons	= photons;
+	inte->nCausSearch	= search;
+	inte->causDepth		= cDepth;
+	inte->causRadius	= cRad;
 	// AO settings
-	inte->useAmbientOcclusion = do_AO;
-	inte->aoSamples = AO_samples;
-	inte->aoDist = AO_dist;
-	inte->aoCol = AO_col;
+	inte->useAmbientOcclusion	= do_AO;
+	inte->aoSamples			= AO_samples;
+	inte->aoDist			= AO_dist;
+	inte->aoCol			= AO_col;
 	return inte;
 }
 

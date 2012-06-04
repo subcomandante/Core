@@ -61,6 +61,7 @@ class YAFRAYCORE_EXPORT vector3d_t
 		
 		void set(PFLOAT ix, PFLOAT iy, PFLOAT iz=0) { x=ix;  y=iy;  z=iz; }
 		vector3d_t& normalize();
+		vector3d_t& reflect(const vector3d_t &n);
 		// normalizes and returns length
 		PFLOAT normLen()
 		{
@@ -253,10 +254,28 @@ inline vector3d_t& vector3d_t::normalize()
 	return *this;
 }
 
+// Vector reflection
+// Lynn's formula R = 2*(V dot N)*N -V
+// Reference: www.3dkingdoms.com/weekly/weekly.php?a=2
+// n MUST be unit vector
+inline vector3d_t& vector3d_t::reflect(const vector3d_t &n)
+{
+	const float vn = 2.0f*(x*n.x+y*n.y+z*n.z);
+	x = vn*n.x -x;
+	y = vn*n.y -y;
+	z = vn*n.z -z;
+	return *this;
+}
+
+/*inline vector3d_t reflect_vector(const vector3d_t &n,const vector3d_t &v)
+{
+	return (2.f*(v*n))*n - v;
+}
+*/
 inline vector3d_t reflect_dir(const vector3d_t &n,const vector3d_t &v)
 {
 	const PFLOAT vn = v*n;
-	if (vn<0) return -v;
+	//if (vn<0) return -v;
 	return 2*vn*n - v;
 }
 
@@ -274,7 +293,7 @@ YAFRAYCORE_EXPORT void fast_fresnel(const vector3d_t & I, const vector3d_t & n, 
 
 inline void createCS(const vector3d_t &N, vector3d_t &u, vector3d_t &v)
 {
-	if ((N.x==0) && (N.y==0))
+	if ((std::fabs(N.x)<YAF_MIN_FLOAT) && (std::fabs(N.y)<YAF_MIN_FLOAT))
 	{
 		if (N.z<0)
 			u.set(-1, 0, 0);

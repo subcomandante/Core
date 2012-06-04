@@ -36,7 +36,7 @@ void shinyDiffuseMat_t::config(shaderNode_t *diff, shaderNode_t *refl, shaderNod
 	viNodes[0] = viNodes[1] = viNodes[2] = viNodes[3] = false;
 	vdNodes[0] = vdNodes[1] = vdNodes[2] = vdNodes[3] = false;
 	float acc = 1.f;
-	if(mSpecRefl > 0.00001f || specReflS)
+	if(mSpecRefl > 0.f || specReflS)
 	{
 		isReflective = true;
 		if(specReflS){ if(specReflS->isViewDependant())vdNodes[0] = true; else viNodes[0] = true; }
@@ -46,7 +46,7 @@ void shinyDiffuseMat_t::config(shaderNode_t *diff, shaderNode_t *refl, shaderNod
 		cIndex[nBSDF] = 0;
 		++nBSDF;
 	}
-	if(mTransp*acc > 0.00001f || transpS)
+	if(mTransp*acc > 0.f || transpS)
 	{
 		isTranspar = true;
 		if(transpS){ if(transpS->isViewDependant())vdNodes[1] = true; else viNodes[1] = true; }
@@ -56,7 +56,7 @@ void shinyDiffuseMat_t::config(shaderNode_t *diff, shaderNode_t *refl, shaderNod
 		cIndex[nBSDF] = 1;
 		++nBSDF;
 	}
-	if(mTransl*acc > 0.00001f || translS)
+	if(mTransl*acc > 0.f || translS)
 	{
 		isTransluc = true;
 		if(translS){ if(translS->isViewDependant())vdNodes[2] = true; else viNodes[2] = true; }
@@ -66,7 +66,7 @@ void shinyDiffuseMat_t::config(shaderNode_t *diff, shaderNode_t *refl, shaderNod
 		cIndex[nBSDF] = 2;
 		++nBSDF;
 	}
-	if(mDiffuse*acc > 0.00001f)
+	if(mDiffuse*acc > 0.f)
 	{
 		isDiffuse = true;
 		if(diffuseS){ if(diffuseS->isViewDependant())vdNodes[3] = true; else viNodes[3] = true; }
@@ -109,8 +109,9 @@ inline void shinyDiffuseMat_t::getFresnel(const vector3d_t &wo, const vector3d_t
 	if(fresnelEffect)
 	{
 		vector3d_t N;
+		PFLOAT cos_wo = wo*n;
 
-		if((wo*n) < 0.f)
+		if(cos_wo < 0.f)
 		{
 			N=-n;
 		}
@@ -176,17 +177,15 @@ void shinyDiffuseMat_t::initOrenNayar(double sigma)
 
 CFLOAT shinyDiffuseMat_t::OrenNayar(const vector3d_t &wi, const vector3d_t &wo, const vector3d_t &N) const
 {
-	PFLOAT cos_ti = std::max(-1.f,std::min(1.f,N*wi));
-	PFLOAT cos_to = std::max(-1.f,std::min(1.f,N*wo));
+	PFLOAT cos_ti = N*wi;
+	PFLOAT cos_to = N*wo;
+		
 	CFLOAT maxcos_f = 0.f;
 	
-	if(cos_ti < 0.9999f && cos_to < 0.9999f)
-	{
-		vector3d_t v1 = (wi - N*cos_ti).normalize();
-		vector3d_t v2 = (wo - N*cos_to).normalize();
-		maxcos_f = std::max(0.f, v1*v2);
-	}
-	
+	vector3d_t v1 = (wi - N*cos_ti).normalize();
+	vector3d_t v2 = (wo - N*cos_to).normalize();
+	maxcos_f = std::max(0.f, v1*v2);
+		
 	CFLOAT sin_alpha, tan_beta;
 	
 	if(cos_to >= cos_ti)
@@ -208,6 +207,7 @@ color_t shinyDiffuseMat_t::eval(const renderState_t &state, const surfacePoint_t
 {
 	PFLOAT cos_Ng_wo = sp.Ng*wo;
 	PFLOAT cos_Ng_wl = sp.Ng*wl;
+	
 	// face forward:
 	vector3d_t N = FACE_FORWARD(sp.Ng, sp.N, wo);
 	if(!(bsdfs & bsdfFlags & BSDF_DIFFUSE)) return color_t(0.f);
@@ -226,7 +226,7 @@ color_t shinyDiffuseMat_t::eval(const renderState_t &state, const surfacePoint_t
 		if(isTransluc) return dat->component[2] * mT * (diffuseS ? diffuseS->getColor(stack) : color);
 	}
 	
-	if(N*wl < 0.0) return color_t(0.f);
+	if(N*wl < 0.f) return color_t(0.f);
 	float mD = mT*(1.f - dat->component[2]) * dat->component[3];
 	if(orenNayar) mD *= OrenNayar(wo, wl, N);
 	return mD * (diffuseS ? diffuseS->getColor(stack) : color);
@@ -267,7 +267,7 @@ color_t shinyDiffuseMat_t::sample(const renderState_t &state, const surfacePoint
 			++nMatch;
 		}
 	}
-	if(!nMatch || sum < 0.00001){ s.sampledFlags=BSDF_NONE; s.pdf=0.f; return color_t(1.f); }
+	if(!nMatch || sum < 0.f){ s.sampledFlags=BSDF_NONE; s.pdf=0.f; return color_t(1.f); }
 	float inv_sum = 1.f/sum;
 	for(int i=0; i<nMatch; ++i)
 	{
@@ -356,7 +356,7 @@ float shinyDiffuseMat_t::pdf(const renderState_t &state, const surfacePoint_t &s
 			++nMatch;
 		}
 	}
-	if(!nMatch || sum < 0.00001) return 0.f;
+	if(!nMatch || sum < 0.f) return 0.f;
 	return pdf / sum;
 }
 
@@ -369,7 +369,7 @@ void shinyDiffuseMat_t::getSpecular(const renderState_t &state, const surfacePoi
 {
 	SDDat_t *dat = (SDDat_t *)state.userdata;
 	nodeStack_t stack(dat->nodeStack);
-	bool backface = sp.Ng * wo < 0;
+	bool backface = sp.Ng * wo < 0.f;
 	vector3d_t N = backface ? -sp.N : sp.N;
 	vector3d_t Ng = backface ? -sp.Ng : sp.Ng;
 	float Kr;
@@ -384,9 +384,11 @@ void shinyDiffuseMat_t::getSpecular(const renderState_t &state, const surfacePoi
 	reflect=isReflective;
 	if(isReflective)
 	{
-		dir[0] = reflect_plane(N, wo);
+		//dir[0] = reflect_vector(N, wo);
+		dir[0] = wo;
+		dir[0].reflect(N);
 		PFLOAT cos_wi_Ng = dir[0]*Ng;
-		if(cos_wi_Ng < 0.01){ dir[0] += (0.01-cos_wi_Ng)*Ng; dir[0].normalize(); }
+		if(cos_wi_Ng < 0.f){ dir[0] += (-cos_wi_Ng)*Ng; dir[0].normalize(); }
 		col[0] = (mirColS ? mirColS->getColor(stack) : specRefCol) * (dat->component[0]*Kr);
 	}
 }

@@ -37,7 +37,7 @@ vector3d_t inline SampleSphere(float s1, float s2)
 	vector3d_t dir;
 	dir.z = 1.0f - 2.0f*s1;
 	PFLOAT r = 1.0f - dir.z*dir.z;
-	if(r>0.0f)
+	if(r>YAF_MIN_FLOAT)
 	{
 		r = fSqrt(r);
 		PFLOAT a = M_2PI * s2;
@@ -137,18 +137,12 @@ void inline minRot(const vector3d_t &D, const vector3d_t &U,
 	V2 = D2^U2;
 }
 
-inline vector3d_t reflect_plane(const vector3d_t &n,const vector3d_t &v)
-{
-	const PFLOAT vn = v*n;
-	return (2.f*vn)*n - v;
-}
-
 //! Just a "modulo 1" float addition, assumed that both values are in range [0;1]
 
 inline float addMod1(float a, float b)
 {
 	float s = a+b;
-	return s>1 ? s-1.f : s;
+	return s>1.f ? s-1.f : s;
 }
 
 __END_YAFRAY

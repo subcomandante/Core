@@ -126,19 +126,22 @@ void coatedGlossyMat_t::initOrenNayar(double sigma)
 
 float coatedGlossyMat_t::OrenNayar(const vector3d_t &wi, const vector3d_t &wo, const vector3d_t &N) const
 {
-	float cos_ti = std::max(-1.f,std::min(1.f,N*wi));
-	float cos_to = std::max(-1.f,std::min(1.f,N*wo));
+	#ifdef Y_CHECK_DOMAIN
+		float cos_ti = std::max(-1.f,std::min(1.f,N*wi));
+		float cos_to = std::max(-1.f,std::min(1.f,N*wo));
+	#else
+		float cos_ti = N*wi;
+		float cos_to = N*wo;
+	#endif
 	float maxcos_f = 0.f;
 	
-	if(cos_ti < 0.9999f && cos_to < 0.9999f)
-	{
-		vector3d_t v1 = (wi - N*cos_ti).normalize();
-		vector3d_t v2 = (wo - N*cos_to).normalize();
-		maxcos_f = std::max(0.f, v1*v2);
-	}
+	vector3d_t v1 = (wi - N*cos_ti).normalize();
+	vector3d_t v2 = (wo - N*cos_to).normalize();
+	maxcos_f = std::max(0.f, v1*v2);
 	
 	float sin_alpha, tan_beta;
 	
+	// TODO: Check for more realistic algo (using tan_beta seems too aggressive to subcomandante)
 	if(cos_to >= cos_ti)
 	{
 		sin_alpha = fSqrt(1.f - cos_ti*cos_ti);
@@ -229,7 +232,7 @@ color_t coatedGlossyMat_t::sample(const renderState_t &state, const surfacePoint
 			++nMatch;
 		}
 	}
-	if(!nMatch || sum < 0.00001){ return color_t(0.f); }
+	if(!nMatch || sum < 0.f){ return color_t(0.f); }
 	else if(nMatch==1){ pick=0; width[0]=1.f; }
 	else
 	{
@@ -260,18 +263,27 @@ color_t coatedGlossyMat_t::sample(const renderState_t &state, const surfacePoint
 			}
 			break;
 		case C_GLOSSY: // glossy
-			if(anisotropic) AS_Aniso_Sample(Hs, s1, s.s2, exp_u, exp_v);
-			else 			Blinn_Sample(Hs, s1, s.s2, exponent);
+			if(anisotropic)	AS_Aniso_Sample(Hs, s1, s.s2, exp_u, exp_v);
+			else		Blinn_Sample(Hs, s1, s.s2, exponent);
 			break;
 		case C_DIFFUSE: // lambertian
 		default:
 			wi = SampleCosHemisphere(N, sp.NU, sp.NV, s1, s.s2);
-			cos_Ng_wi = sp.Ng*wi;
-			if(cos_Ng_wo*cos_Ng_wi < 0) return color_t(0.f);
+			#ifdef Y_CHECK_DOMAIN
+				cos_Ng_wi = std::max(-1.f,std::min(1.f,sp.Ng*wi));
+			#else
+				cos_Ng_wi = sp.Ng*wi;
+			#endif
+			if(cos_Ng_wo*cos_Ng_wi < 0.f) return color_t(0.f);
 	}
 
-	wiN = std::fabs(wi * N);
-	woN = std::fabs(wo * N);
+	#ifdef Y_CHECK_DOMAIN
+		wiN = std::fabs(std::max(-1.f,std::min(1.f,wi*N)));
+		woN = std::fabs(std::max(-1.f,std::min(1.f,wo*N)));
+	#else
+		wiN = std::fabs(wi * N);
+		woN = std::fabs(wo * N);
+	#endif
 	
 	if(cIndex[pick] != C_SPECULAR)
 	{
@@ -285,24 +297,40 @@ color_t coatedGlossyMat_t::sample(const renderState_t &state, const surfacePoint
 			{
 				H = (wi+wo).normalize();
 				Hs = vector3d_t(H*sp.NU, H*sp.NV, H*N);
-				cos_wo_H = wo*H;
+				#ifdef Y_CHECK_DOMAIN
+					cos_wo_H = std::max(-1.f,std::min(1.f,wo*H));
+				#else
+					cos_wo_H = wo*H;
+				#endif
 			}
 			else
 			{
 				H = Hs.x*sp.NU + Hs.y*sp.NV + Hs.z*N;
-				cos_wo_H = wo*H;
+				#ifdef Y_CHECK_DOMAIN
+					cos_wo_H = std::max(-1.f,std::min(1.f,wo*H));
+				#else
+					cos_wo_H = wo*H;
+				#endif
 				if ( cos_wo_H < 0.f )
 				{
-					H = reflect_plane(N, H);
+					H.reflect(N);
 					cos_wo_H = wo*H;
 				}
 				// Compute incident direction by reflecting wo about H
 				wi = reflect_dir(H, wo);
-				cos_Ng_wi = sp.Ng*wi;
-				if(cos_Ng_wo*cos_Ng_wi < 0) return color_t(0.f);
+				#ifdef Y_CHECK_DOMAIN
+					cos_Ng_wi = std::max(-1.f,std::min(1.f,sp.Ng*wi));
+				#else
+					cos_Ng_wi = sp.Ng*wi;
+				#endif
+				if(cos_Ng_wo*cos_Ng_wi < 0.f) return color_t(0.f);
 			}
-			
-			wiN = std::fabs(wi * N);
+
+			#ifdef Y_CHECK_DOMAIN
+				wiN = std::fabs(std::max(-1.f,std::min(1.f,wi*N)));
+			#else
+				wiN = std::fabs(wi * N);
+			#endif
 			
 			if(anisotropic)
 			{
@@ -311,7 +339,11 @@ color_t coatedGlossyMat_t::sample(const renderState_t &state, const surfacePoint
 			}
 			else
 			{
-				float cosHN = H*N;
+				#ifdef Y_CHECK_DOMAIN
+					float cosHN = std::max(-1.f,std::min(1.f,H*N));
+				#else
+					float cosHN = H*N;
+				#endif
 				s.pdf += Blinn_Pdf(cosHN, cos_wo_H, exponent) * width[rcIndex[C_GLOSSY]];
 				glossy = Blinn_D(cosHN, exponent) * SchlickFresnel(cos_wo_H, dat->mGlossy) / ASDivisor(cos_wo_H, woN, wiN);
 			}
@@ -323,7 +355,7 @@ color_t coatedGlossyMat_t::sample(const renderState_t &state, const surfacePoint
 			scolor += diffuseReflectFresnel(wiN, woN, dat->mGlossy, dat->mDiffuse, (diffuseS ? diffuseS->getColor(stack) : diff_color), Kt) * ((orenNayar)?OrenNayar(wi, wo, N):1.f);
 			s.pdf += wiN * width[rcIndex[C_DIFFUSE]];
 		}
-		W = wiN / (s.pdf * 0.99f + 0.01f);
+		W = wiN / s.pdf;
 	}
 	else
 	{
@@ -361,8 +393,13 @@ float coatedGlossyMat_t::pdf(const renderState_t &state, const surfacePoint_t &s
 			if(i == C_GLOSSY)
 			{
 				vector3d_t H = (wi+wo).normalize();
-				float cos_wo_H = wo*H;
-				float cos_N_H = N*H;
+				#ifdef Y_CHECK_DOMAIN
+					float cos_wo_H = std::max(-1.f,std::min(1.f,wo*H));
+					float cos_N_H = std::max(-1.f,std::min(1.f,N*H));
+				#else
+					float cos_wo_H = wo*H;
+					float cos_N_H = N*H;
+				#endif
 				if(anisotropic)
 				{
 					vector3d_t Hs(H*sp.NU, H*sp.NV, cos_N_H);
@@ -372,47 +409,62 @@ float coatedGlossyMat_t::pdf(const renderState_t &state, const surfacePoint_t &s
 			}
 			else if(i == C_DIFFUSE)
 			{
-				pdf += std::fabs(wi*N) * width;
+				#ifdef Y_CHECK_DOMAIN
+					pdf += std::fabs(std::max(-1.f,std::min(1.f,wi*N)) * width;
+				#else
+					pdf += std::fabs(wi*N) * width;
+				#endif
 			}
 			++nMatch;
 		}
 	}
-	if(!nMatch || sum < 0.00001) return 0.f;
+	if(!nMatch || sum < YAF_MIN_FLOAT) return 0.f;
 	return pdf / sum;
 }
 
 void coatedGlossyMat_t::getSpecular(const renderState_t &state, const surfacePoint_t &sp, const vector3d_t &wo,
 							 bool &refl, bool &refr, vector3d_t *const dir, color_t *const col)const
 {
-	bool outside = sp.Ng*wo >= 0;
+	bool outside = sp.Ng*wo >= 0.f;
 	vector3d_t N, Ng;
-	float cos_wo_N = sp.N*wo;
+	#ifdef Y_CHECK_DOMAIN
+		float cos_wo_N = std::max(-1.f,std::min(1.f,sp.N*wo);
+	#else
+		float cos_wo_N = sp.N*wo;
+	#endif
 	if(outside)
 	{
-		N = (cos_wo_N >= 0) ? sp.N : (sp.N - (1.00001*cos_wo_N)*wo).normalize();
+		N = (cos_wo_N >= 0.f) ? sp.N : (sp.N - cos_wo_N*wo).normalize();
 		Ng = sp.Ng;
 	}
 	else
 	{
-		N = (cos_wo_N <= 0) ? sp.N : (sp.N - (1.00001*cos_wo_N)*wo).normalize();
+		N = (cos_wo_N <= 0.f) ? sp.N : (sp.N - cos_wo_N*wo).normalize();
 		Ng = -sp.Ng;
 	}
-	
+	N.normalize();
 	float Kr, Kt;
 	fresnel(wo, N, IOR, Kr, Kt);
 	
 	refr = false;
 	
-	if(state.raylevel > 5) return;
-	
-	dir[0] = reflect_plane(N, wo);
+	//if(state.raylevel > 5) return;
+	//dir[0] = reflect_vector(N, wo);
+	dir[0] = wo;
+	dir[0].reflect(N);
+	dir[0].normalize();
 	col[0] = Kr * mirror_color;
-	float cos_wi_Ng = dir[0]*Ng;
-	if(cos_wi_Ng < 0.01)
+	#ifdef Y_CHECK_DOMAIN
+		float cos_wi_Ng = std::max(-1.f,std::min(1.f,dir[0]*Ng);
+	#else
+		float cos_wi_Ng = dir[0]*Ng;
+	#endif
+	if(cos_wi_Ng < -YAF_MIN_FLOAT)
 	{
-		dir[0] += (0.01-cos_wi_Ng)*Ng;
+		dir[0] -= cos_wi_Ng*Ng;
 		dir[0].normalize();
 	}
+	
 	refl = true;
 }
 
@@ -427,17 +479,15 @@ material_t* coatedGlossyMat_t::factory(paraMap_t &params, std::list< paraMap_t >
 	bool aniso=false;
 	const std::string *name=0;
 
-	params.getParam("color", col);
-	params.getParam("diffuse_color", dcol);
-	params.getParam("diffuse_reflect", diff);
-	params.getParam("glossy_reflect", refl);
-	params.getParam("as_diffuse", as_diff);
-	params.getParam("exponent", exponent);
-	params.getParam("anisotropic", aniso);
-	params.getParam("IOR", ior);
-	params.getParam("mirror_color", mirCol);
-	
-	if(ior == 1.f) ior = 1.0000001f;
+	params.getParam("color",		col);
+	params.getParam("diffuse_color",	dcol);
+	params.getParam("diffuse_reflect",	diff);
+	params.getParam("glossy_reflect",	refl);
+	params.getParam("as_diffuse",		as_diff);
+	params.getParam("exponent",		exponent);
+	params.getParam("anisotropic",		aniso);
+	params.getParam("IOR",			ior);
+	params.getParam("mirror_color",		mirCol);
 
 	coatedGlossyMat_t *mat = new coatedGlossyMat_t(col, dcol, mirCol, refl, diff, ior, exponent, as_diff);
 	if(aniso)
@@ -465,10 +515,10 @@ material_t* coatedGlossyMat_t::factory(paraMap_t &params, std::list< paraMap_t >
 	std::map<std::string, shaderNode_t *>::iterator actNode;
 	
 	// Prepare our node list
-	nodeList["diffuse_shader"] = NULL;
-	nodeList["glossy_shader"] = NULL;
+	nodeList["diffuse_shader"]	  = NULL;
+	nodeList["glossy_shader"]	  = NULL;
 	nodeList["glossy_reflect_shader"] = NULL;
-	nodeList["bump_shader"] = NULL;
+	nodeList["bump_shader"]		  = NULL;
 	
 	if(mat->loadNodes(paramList, render))
 	{
@@ -489,19 +539,19 @@ material_t* coatedGlossyMat_t::factory(paraMap_t &params, std::list< paraMap_t >
 	}
 	else Y_ERROR << "CoatedGlossy: loadNodes() failed!" << yendl;
 
-	mat->diffuseS = nodeList["diffuse_shader"];
-	mat->glossyS = nodeList["glossy_shader"];
-	mat->glossyRefS = nodeList["glossy_reflect_shader"];
-	mat->bumpS = nodeList["bump_shader"];
+	mat->diffuseS	= nodeList["diffuse_shader"];
+	mat->glossyS	= nodeList["glossy_shader"];
+	mat->glossyRefS	= nodeList["glossy_reflect_shader"];
+	mat->bumpS	= nodeList["bump_shader"];
 
 	// solve nodes order
 	if(!roots.empty())
 	{
 		mat->solveNodesOrder(roots);
 		std::vector<shaderNode_t *> colorNodes;
-		if(mat->diffuseS) mat->getNodeList(mat->diffuseS, colorNodes);
-		if(mat->glossyS) mat->getNodeList(mat->glossyS, colorNodes);
-		if(mat->glossyRefS) mat->getNodeList(mat->glossyRefS, colorNodes);
+		if(mat->diffuseS)	mat->getNodeList(mat->diffuseS, colorNodes);
+		if(mat->glossyS)	mat->getNodeList(mat->glossyS, colorNodes);
+		if(mat->glossyRefS)	mat->getNodeList(mat->glossyRefS, colorNodes);
 		mat->filterNodes(colorNodes, mat->allViewdep, VIEW_DEP);
 		mat->filterNodes(colorNodes, mat->allViewindep, VIEW_INDEP);
 		if(mat->bumpS) mat->getNodeList(mat->bumpS, mat->bumpNodes);
