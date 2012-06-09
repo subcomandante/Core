@@ -361,34 +361,42 @@ float shinyDiffuseMat_t::pdf(const renderState_t &state, const surfacePoint_t &s
 }
 
 
-
-// todo!
-
-void shinyDiffuseMat_t::getSpecular(const renderState_t &state, const surfacePoint_t &sp, const vector3d_t &wo,
-							  bool &reflect, bool &refract, vector3d_t *const dir, color_t *const col)const
+// reflect and refract are false
+void shinyDiffuseMat_t::getSpecular(const renderState_t &state, const surfacePoint_t &sp, const vector3d_t &wo, bool &reflect, bool &refract, vector3d_t *const dir, color_t *const col)const
 {
 	SDDat_t *dat = (SDDat_t *)state.userdata;
 	nodeStack_t stack(dat->nodeStack);
-	bool backface = sp.Ng * wo < 0;
-	vector3d_t N = backface ? -sp.N : sp.N;
-	vector3d_t Ng = backface ? -sp.Ng : sp.Ng;
+
+	const bool backface = wo * sp.Ng < 0.f;
+	const vector3d_t N  = backface ? -sp.N  : sp.N;
+	const vector3d_t Ng = backface ? -sp.Ng : sp.Ng;
+
 	float Kr;
 	getFresnel(wo, N, Kr);
-	refract = isTranspar;
+
 	if(isTranspar)
 	{
+		refract = true;
 		dir[1] = -wo;
 		color_t tcol = filter * (diffuseS ? diffuseS->getColor(stack) : color) + color_t(1.f-filter);
 		col[1] = (1.f - dat->component[0]*Kr) * dat->component[1] * tcol;
 	}
-	reflect=isReflective;
+
 	if(isReflective)
 	{
-		dir[0] = wo;
-		dir[0].reflect(N);
-		PFLOAT cos_wi_Ng = dir[0]*Ng;
-		if(cos_wi_Ng < 0.01){ dir[0] += (0.01-cos_wi_Ng)*Ng; dir[0].normalize(); }
-		col[0] = (mirColS ? mirColS->getColor(stack) : specRefCol) * (dat->component[0]*Kr);
+		if (backface)
+		{
+			reflect = false;
+		}
+		else
+		{
+			reflect = true;
+			dir[0] = wo;
+			dir[0].reflect(N);
+			PFLOAT cos_wi_Ng = dir[0]*Ng;
+			//if(cos_wi_Ng < 0.01){ dir[0] += (0.01-cos_wi_Ng)*Ng; dir[0].normalize(); }
+			col[0] = (mirColS ? mirColS->getColor(stack) : specRefCol) * (dat->component[0]*Kr);
+		}
 	}
 }
 

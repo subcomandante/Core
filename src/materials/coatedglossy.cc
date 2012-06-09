@@ -381,27 +381,24 @@ float coatedGlossyMat_t::pdf(const renderState_t &state, const surfacePoint_t &s
 	return pdf / sum;
 }
 
-void coatedGlossyMat_t::getSpecular(const renderState_t &state, const surfacePoint_t &sp, const vector3d_t &wo,
-							 bool &refl, bool &refr, vector3d_t *const dir, color_t *const col)const
+void coatedGlossyMat_t::getSpecular(const renderState_t &state, const surfacePoint_t &sp, const vector3d_t &wo, bool &reflect, bool &refract, vector3d_t *const dir, color_t *const col)const
 {
-	bool outside = sp.Ng*wo >= 0;
-	vector3d_t N, Ng;
-	float cos_wo_N = sp.N*wo;
-	if(outside)
+	vector3d_t N;
+	float cos_wo_N = wo * sp.N;
+
+	const bool backface = wo * sp.Ng < 0.f;
+	if(backface)
 	{
-		N = (cos_wo_N >= 0) ? sp.N : (sp.N - (1.00001*cos_wo_N)*wo).normalize();
-		Ng = sp.Ng;
+		N = (cos_wo_N <= 0.f) ? sp.N : (sp.N - (1.00001*cos_wo_N)*wo).normalize();
 	}
 	else
 	{
-		N = (cos_wo_N <= 0) ? sp.N : (sp.N - (1.00001*cos_wo_N)*wo).normalize();
-		Ng = -sp.Ng;
+		N = (cos_wo_N >= 0.f) ? sp.N : (sp.N - (1.00001*cos_wo_N)*wo).normalize();
 	}
+	const vector3d_t Ng = backface ? -sp.Ng : sp.Ng;
 	
 	float Kr, Kt;
 	fresnel(wo, N, IOR, Kr, Kt);
-	
-	refr = false;
 	
 	if(state.raylevel > 5) return;
 	
@@ -414,7 +411,7 @@ void coatedGlossyMat_t::getSpecular(const renderState_t &state, const surfacePoi
 		dir[0] += (0.01-cos_wi_Ng)*Ng;
 		dir[0].normalize();
 	}
-	refl = true;
+	reflect = true;
 }
 
 material_t* coatedGlossyMat_t::factory(paraMap_t &params, std::list< paraMap_t > &paramList, renderEnvironment_t &render)

@@ -202,19 +202,20 @@ CFLOAT glassMat_t::getAlpha(const renderState_t &state, const surfacePoint_t &sp
 }
 
 void glassMat_t::getSpecular(const renderState_t &state, const surfacePoint_t &sp, const vector3d_t &wo,
-							 bool &refl, bool &refr, vector3d_t *const dir, color_t *const col)const
+bool &refl, bool &refr, vector3d_t *const dir, color_t *const col)const
 {
-	nodeStack_t stack(state.userdata);
-	bool outside = sp.Ng*wo > 0;
+	nodeStack_t stack(state.userdata);	
 	vector3d_t N;
-	PFLOAT cos_wo_N = sp.N*wo;
-	if(outside)
+	PFLOAT cos_wo_N = wo * sp.N;
+
+	const bool backface = wo * sp.Ng < 0.f;
+	if(backface)
 	{
-		N = (cos_wo_N >= 0) ? sp.N : (sp.N - (1.00001*cos_wo_N)*wo).normalize();
+		N = (cos_wo_N <= 0) ? sp.N : (sp.N - (1.00001*cos_wo_N)*wo).normalize();
 	}
 	else
 	{
-		N = (cos_wo_N <= 0) ? sp.N : (sp.N - (1.00001*cos_wo_N)*wo).normalize();
+		N = (cos_wo_N >= 0) ? sp.N : (sp.N - (1.00001*cos_wo_N)*wo).normalize();
 	}
 //	vector3d_t N = FACE_FORWARD(sp.Ng, sp.N, wo);
 	vector3d_t refdir;
@@ -233,7 +234,7 @@ void glassMat_t::getSpecular(const renderState_t &state, const surfacePoint_t &s
 		else refr = false; // in this case, we need to sample dispersion, i.e. not considered specular
 		// accounting for fresnel reflection when leaving refractive material is a real performance
 		// killer as rays keep bouncing inside objects and contribute little after few bounces, so limit we it:
-		if(outside || state.raylevel < 2)
+		if(!backface || state.raylevel < 2)
 		{
 			dir[0] = wo;
 			dir[0].reflect(N);
