@@ -386,7 +386,9 @@ void shinyDiffuseMat_t::getSpecular(const renderState_t &state, const surfacePoi
 	{
 		/*if (backface)
 		{
-			reflect = false;
+			reflect = true;
+			dir[0] = -wo;
+			col[0] = (mirColS ? mirColS->getColor(stack) : specRefCol) * (dat->component[0]*Kr);
 		}
 		else
 		{
@@ -401,6 +403,7 @@ void shinyDiffuseMat_t::getSpecular(const renderState_t &state, const surfacePoi
 		dir[0] = wo;
 		dir[0].reflect(N);
 		col[0] = (mirColS ? mirColS->getColor(stack) : specRefCol) * (dat->component[0]*Kr);
+		
 	}
 }
 
