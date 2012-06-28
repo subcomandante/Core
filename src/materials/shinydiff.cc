@@ -14,13 +14,13 @@ shinyDiffuseMat_t::shinyDiffuseMat_t(const color_t &diffuseColor,
                                      float emitStrength,
                                      float transmitFilterStrength):
 
-                                     mIsTransparent(false), mIsTranslucent(false), mIsMirror(false), mIsDiffuse(false),
-                                     mHasFresnelEffect(false),
-                                     mDiffuseShader(0), mBumpShader(0), mTransparencyShader(0), mTranslucencyShader(0), mMirrorShader(0), mMirrorColorShader(0),
-                                     mDiffuseColor(diffuseColor), mMirrorColor(mirrorColor),
-                                     mMirrorStrength(mirrorStrength), mTransparencyStrength(transparencyStrength), mTranslucencyStrength(translucencyStrength), mDiffuseStrength(diffuseStrength), mTransmitFilterStrength(transmitFilterStrength),
-                                     mUseOrenNayar(false),
-                                     nBSDF(0)
+    mIsTransparent(false), mIsTranslucent(false), mIsMirror(false), mIsDiffuse(false),
+    mHasFresnelEffect(false),
+    mDiffuseShader(0), mBumpShader(0), mTransparencyShader(0), mTranslucencyShader(0), mMirrorShader(0), mMirrorColorShader(0),
+    mDiffuseColor(diffuseColor), mMirrorColor(mirrorColor),
+    mMirrorStrength(mirrorStrength), mTransparencyStrength(transparencyStrength), mTranslucencyStrength(translucencyStrength), mDiffuseStrength(diffuseStrength), mTransmitFilterStrength(transmitFilterStrength),
+    mUseOrenNayar(false),
+    nBSDF(0)
 {
     mEmitColor = emitStrength * diffuseColor;
     mEmitStrength = emitStrength;
